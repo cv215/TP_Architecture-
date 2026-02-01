@@ -36,7 +36,7 @@ def login_user(request):
         else:
             messages.error(request, "Nom d'utilisateur ou mot de passe incorrect")
 
-    return render(request, "banka/login.html")
+    return render(request, "banka/login.html", {"roles": roles})
 
 def register_user(request):
     if request.method == "POST":

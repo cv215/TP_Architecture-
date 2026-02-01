@@ -1,5 +1,4 @@
 from django.contrib import admin
-<<<<<<< HEAD
 from .models import User, Compte, Transaction, Agence, Role, AuditLog, Notification, FraudAlert, Event, Permission
 
 # Register your models here.
@@ -75,7 +74,3 @@ admin.site.register(Notification, AdminNotification)
 admin.site.register(FraudAlert, AdminFraudAlert)
 admin.site.register(Event, AdminEvent)
 admin.site.register(Permission, AdminPermission)  
-=======
-
-# Register your models here.
->>>>>>> 1d57ea70ddecb7bf7ea5f0ae9c7cb23bdc51d621
