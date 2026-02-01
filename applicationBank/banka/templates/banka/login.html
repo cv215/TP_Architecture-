@@ -33,8 +33,9 @@
                     <div class="mb-3">
                         <label class="form-label">Rôle</label>
                         <select class="form-select" name="role" required>
-                            <option value="Client" selected>Client</option>
-                            <option value="Administrateur">Administrateur</option>
+                            {% for role in roles %}
+                                <option value="{{ role.id }}">{{ role.nom }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                     <a  href=""></a>
