@@ -14,19 +14,25 @@ def index(request):
     return render(request, 'banka/index.html')
 
 def login_user(request):
+    roles = Role.objects.all()
+    
     if request.method == "POST":
         username = request.POST.get("email")
         password = request.POST.get("password")
+        role_id = request.POST.get("role")
 
         user = authenticate(request, username=username, password=password)
 
         if user is not None:
-            login(request, user)
-            # Vérifier le rôle
-            if user.role.nom == "Administrateur":
-                return redirect("index_admin")
-            else:
-                return redirect("index")
+
+           if str(user.role.id) == str(role_id): 
+               login(request, user) 
+               if user.role.nom == "Administrateur": 
+                   return redirect("index_admin") 
+               else: 
+                   return redirect("index") 
+           else: 
+                messages.error(request, "Le rôle sélectionné est incorrect.")
         else:
             messages.error(request, "Nom d'utilisateur ou mot de passe incorrect")
 
