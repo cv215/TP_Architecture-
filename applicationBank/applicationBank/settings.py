@@ -118,9 +118,6 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
-<<<<<<< HEAD
 AUTH_USER_MODEL = 'banka.User'
 STATICFILES_DIRS = [TEMPLATES_DIRS,]
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-=======
->>>>>>> 1d57ea70ddecb7bf7ea5f0ae9c7cb23bdc51d621
