@@ -1,0 +1,99 @@
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+<script src="https://code.jquery.com/jquery-3.7.1.js" integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>
+{% block content %}
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header text-center bg-primary text-white">
+                <h4>Créer un compte</h4>
+            </div>
+                <p>
+                    Rejoignez-nous et profitez d'une gestion bancaire simplifiée
+                </p>
+            <div class="card-body">
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-danger">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+
+                <form method="POST">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label>Nom</label>
+                        <input type="text" name="nom" class="form-control" placeholder="Dupo" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label>Prénom</label>
+                        <input type="text" name="prenom" class="form-control" placeholder="Jean" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label>Age</label>
+                        <input type="number" name="age" class="form-control" placeholder="18" min="21" max="120" required>
+                    </div>
+        
+                    <div class="mb-3">
+                        <label>Adresse email</label>
+                        <input type="email" name="email" class="form-control" placeholder="brenda@gmail.com" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label>Numéro de téléphone</label>
+                        <input type="tel" name="telephone" class="form-control" placeholder="+237650263884" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label>Adresse</label>
+                        <input type="text" name="adresse" class="form-control" placeholder="Ngousso" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label>Pays</label>
+                        <input type="text" name="pays" class="form-control" placeholder="Cameroun" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label>Ville</label>
+                        <input type="text" name="ville" class="form-control" placeholder="Yaoundé" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <select class="form-select" name="role" aria-label="Default select example">
+                            <option selected>Client</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label>Mot de passe</label>
+                        <input type="password" name="password1" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label>Confirmer mot de passe</label>
+                        <input type="password" name="password2" class="form-control" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">
+                        Créer mon compte
+                    </button>
+                </form>
+
+                <div class="text-center mt-3">
+                    <p>
+                        Vous avez déjà un compte?
+                        <a href="{% url 'login' %}">Se connecter</a>
+                    </p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
