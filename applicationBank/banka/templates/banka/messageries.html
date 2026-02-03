@@ -1,0 +1,20 @@
+{% extends 'banka/base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">Ma Messagerie</h2>
+    <div class="list-group">
+        {% for message in messages %}
+        <a href="#" class="list-group-item list-group-item-action flex-column align-items-start mb-2">
+            <div class="d-flex w-100 justify-content-between">
+                <h5 class="mb-1">{{ message.sujet }}</h5>
+                <small>{{ message.date_envoi|date:"d/m/Y H:i" }}</small>
+            </div>
+            <p class="mb-1">{{ message.contenu|truncatewords:20 }}</p>
+            <small>De: {{ message.emetteur.email }}</small>
+        </a>
+        {% empty %}
+        <p>Vous n'avez aucun message.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

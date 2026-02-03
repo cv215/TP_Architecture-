@@ -21,21 +21,28 @@ class ClientsManager(BaseUserManager):
             raise ValueError('Superuser must have is_staff=True.')
         if extra_fields.get('is_superuser') is not True:
             raise ValueError('Superuser must have is_superuser=True.')
+        
+        from .models import Role
+        role_admin, _ = Role.objects.get_or_create(nom="Administrateur", description="Superutilisateur")
+
+        extra_fields['role'] = role_admin
 
         return self.create_user(nom, email, password, **extra_fields)
 class User(AbstractBaseUser, PermissionsMixin):
     nom = models.CharField(max_length=100)
-    prenom = models.CharField(max_length=100)
-    age = models.IntegerField()
+    prenom = models.CharField(max_length=100, null=True, blank=True)
+    age = age = models.IntegerField(null=True, blank=True)
     email = models.EmailField(unique=True)
-    telephone = models.CharField(max_length=15, unique=True)
-    adresse = models.CharField(max_length=255)
-    pays = models.CharField(max_length=100)
-    ville = models.CharField(max_length=100)
+    telephone = models.CharField(max_length=15, unique=True, null=True, blank=True)
+    adresse = models.CharField(max_length=255, null=True, blank=True)
+    pays = models.CharField(max_length=100, null=True, blank=True)
+    ville = models.CharField(max_length=100, null=True, blank=True)
     role = models.ForeignKey('Role', on_delete=models.CASCADE)
     permission = models.ManyToManyField('Permission', through='RolePermission')
     agence = models.ForeignKey('Agence', on_delete=models.CASCADE, null=True, blank=True)
     is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False) 
+    is_superuser = models.BooleanField(default=False)
     date_creation = models.DateTimeField(auto_now_add=True)
     date_modification = models.DateTimeField(auto_now=True)
     objects = ClientsManager()
@@ -175,3 +182,12 @@ class FraudAlert(models.Model):
     
     def __str__(self):
         return f"FraudAlert {self.id} - Compte: {self.compte.numero_compte}"
+    
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    solde = models.FloatField(default=0)
+    currency = models.CharField(max_length=3, default="XAF")
+
+    def __str__(self):
+        return f"Profil de {self.user.username}"

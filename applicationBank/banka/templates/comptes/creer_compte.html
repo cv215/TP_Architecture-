@@ -1,0 +1,91 @@
+{% extends 'banka/base.html' %}
+{% block content %}
+<style>
+    body {
+        background: linear-gradient(135deg, #74ebd5, #ACB6E5); /* Dégradé pastel moderne */
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-family: 'Poppins', sans-serif;
+    }
+
+    .form-container {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        padding: 40px;
+        border-radius: 20px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        width: 420px;
+        text-align: center;
+        color: #fff;
+    }
+
+    h2 {
+        font-weight: 600;
+        margin-bottom: 25px;
+        color: #fff;
+    }
+
+    .form-label {
+        font-weight: 500;
+        color: #f0f0f0;
+    }
+
+    .form-control, .form-select {
+        border-radius: 10px;
+        padding: 10px;
+        border: none;
+        outline: none;
+        box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        border: none;
+        border-radius: 12px;
+        padding: 12px;
+        font-weight: 600;
+        transition: 0.3s;
+    }
+
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #764ba2, #667eea);
+        transform: scale(1.05);
+    }
+</style>
+
+<div class="form-container">
+    <h2>Créer un nouveau compte</h2>
+    <form method="post">
+        {% csrf_token %}
+        
+        <!-- Type de compte -->
+        <div class="mb-3 text-start">
+            <label for="type_compte" class="form-label">Type de Compte</label>
+            <select class="form-select" id="type_compte" name="type" required>
+                <option value="courant">Courant</option>
+                <option value="epargne">Épargne</option>
+            </select>
+        </div>  
+
+        <!-- Devise -->
+        <div class="mb-3 text-start">
+            <label for="currency" class="form-label">Devise</label>
+            <select class="form-select" id="currency" name="currency" required>
+                <option value="XAF">Franc CFA (XAF)</option>
+                <option value="USD">Dollar US (USD)</option>
+                <option value="EUR">Euro (EUR)</option>
+            </select>
+        </div>
+
+        <!-- Solde initial -->
+        <div class="mb-3 text-start">
+            <label for="solde" class="form-label">Solde initial</label>
+            <input type="number" class="form-control" id="solde" name="solde" min="0" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">Créer le Compte</button>
+    </form>
+</div>
+{% endblock %}

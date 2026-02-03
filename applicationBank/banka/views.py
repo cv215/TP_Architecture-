@@ -1,12 +1,19 @@
+from mailbox import Message
 from django.shortcuts import render,redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
-from .models import User, Role
-from .models import Transaction, Event, AuditLog
-from django.contrib.auth.decorators import user_passes_test
+
+from banka.tasks import send_welcome_email
+from .models import Compte, Transaction, Event, AuditLog
+from django.contrib.auth.decorators import user_passes_test, login_required
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from .models import User, Event, AuditLog
+from .models import User, Event, AuditLog,Role,Profile,Transaction
+from django.utils.timezone import now
+from datetime import timedelta
+from django.db.models import Sum
+
+from banka import models
 
 # Create your views here.
 
@@ -28,9 +35,9 @@ def login_user(request):
            if str(user.role.id) == str(role_id): 
                login(request, user) 
                if user.role.nom == "Administrateur": 
-                   return redirect("index_admin") 
+                   return redirect("acceuilAdmin") 
                else: 
-                   return redirect("index") 
+                   return redirect("acceuilClient") 
            else: 
                 messages.error(request, "Le rôle sélectionné est incorrect.")
         else:
@@ -76,6 +83,7 @@ def register_user(request):
             role = role_instance,
             password=password1)
         user.save()
+        send_welcome_email.delay(user.email, user.username)
         return redirect("login")
 
     return render(request, "banka/register.html")
@@ -119,6 +127,280 @@ def transaction_event(sender, instance, created, **kwargs):
 def is_admin(user): 
     return user.role.nom == "Administrateur" 
 
-@user_passes_test(is_admin) 
-def index_admin(request): 
-    return render(request, "banka/index_admin.html")
+@user_passes_test(is_admin)
+def index_admin(request):
+    today = now().date()
+    last_week = today - timedelta(days=6)
+
+    nb_comptes = Compte.objects.count()
+    
+    nb_transactions = Transaction.objects.filter(date_transaction__date=today).count()
+
+    total_depots = Transaction.objects.filter(
+        type_transaction="depot", date_transaction__date=today).aggregate(total=Sum("montant"))["total"] or 0
+
+    total_retraits = Transaction.objects.filter(
+        type_transaction="retrait", date_transaction__date=today
+    ).aggregate(total=Sum("montant"))["total"] or 0
+
+    total_virements = Transaction.objects.filter(
+        type_transaction="virement", date_transaction__date=today
+    ).aggregate(total=Sum("montant"))["total"] or 0
+
+    nb_alertes = Transaction.objects.filter(fraud_alerts=True).count()
+
+    transactions = (
+        Transaction.objects.filter(date_transaction__date__gte=last_week)
+        .values("date_transaction__date", "type_transaction")
+        .annotate(total=Sum("montant"))
+        .order_by("date_transaction__date")
+    )
+
+    labels = sorted(set([t["date_transaction__date"].strftime("%d/%m") for t in transactions]))
+    depots, retraits, virements = [], [], []
+    for label in labels:
+        depots.append(sum(t["total"] for t in transactions if t["date_transaction__date"].strftime("%d/%m") == label and t["type_transaction"]=="depot"))
+        retraits.append(sum(t["total"] for t in transactions if t["date_transaction__date"].strftime("%d/%m") == label and t["type_transaction"]=="retrait"))
+        virements.append(sum(t["total"] for t in transactions if t["date_transaction__date"].strftime("%d/%m") == label and t["type_transaction"]=="virement"))
+
+    context = {
+        "nb_comptes": nb_comptes,
+        "nb_transactions": nb_transactions,
+        "total_depots": total_depots,
+        "total_retraits": total_retraits,
+        "total_virements": total_virements,
+        "nb_alertes": nb_alertes,
+        "labels": labels,
+        "depots": depots,
+        "retraits": retraits,
+        "virements": virements,
+    }
+    return render(request, "banka/index_admin.html", context)
+
+
+@login_required
+def comptes(request):
+
+    comptes_user = Compte.objects.filter(proprietaire=request.user)
+    context = { "comptes": comptes_user }
+    return render(request, 'banka/comptes.html', context)
+
+def transactions(request):
+    transactions_user = Transaction.objects.filter(compte_source__proprietaire=request.user).order_by('-date_transaction')
+    context = { "transactions": transactions_user }
+    return render(request, 'banka/transactions.html', context)
+
+def messageries(request):
+    return render(request, 'banka/messageries.html')
+
+@login_required
+def transaction_retrait(request):
+    solde = request.user.profile.solde  # Exemple: solde stocké dans le profil utilisateur
+    profile, created = Profile.objects.get_or_create(user=request.user)
+    
+    if request.method == "POST":
+        try:
+            montant = float(request.POST.get("montant"))
+            operateur = request.POST.get("operateur")  # "mtn" ou "orange"
+            numero = request.POST.get("numero")       # numéro du bénéficiaire
+        except (TypeError, ValueError):
+            messages.error(request, "Montant invalide.")
+            return redirect("transaction_retrait")
+
+        if montant <= 0:
+            messages.error(request, "Le montant doit être supérieur à zéro.")
+        elif montant > solde:
+            messages.error(request, f"Impossible d'effectuer le retrait car vous n'avez que {solde} FCFA dans votre compte.")
+        elif not numero or len(numero) < 8:
+            messages.error(request, "Veuillez saisir un numéro valide.")
+        else:
+            # Ici tu intègres l’API MTN ou Orange Money
+            if operateur == "mtn":
+                # appel API MTN Money
+                messages.success(request, f"Retrait de {montant} FCFA vers {numero} via MTN Money effectué avec succès.")
+            elif operateur == "orange":
+                # appel API Orange Money
+                messages.success(request, f"Retrait de {montant} FCFA vers {numero} via Orange Money effectué avec succès.")
+            else:
+                messages.error(request, "Opérateur non reconnu.")
+            
+            # Mise à jour du solde
+            request.user.profile.solde -= montant
+            request.user.profile.save()
+
+        return redirect("transaction_retrait")
+
+    return render(request, "transactions/retrait.html", {"solde": solde})
+
+
+# --- Vue Django --- 
+@login_required 
+def transaction_depot(request): 
+    if request.method == "POST": 
+        try: 
+            montant = float(request.POST.get("montant")) 
+            operateur = request.POST.get("operateur") 
+            numero = request.POST.get("numero") 
+        except (TypeError, ValueError):
+            messages.error(request, "Montant invalide.") 
+            return redirect("transaction_depot") 
+        if montant <= 0: 
+            messages.error(request, "Le montant doit être supérieur à zéro.") 
+        elif not numero or len(numero) < 8: 
+            messages.error(request, "Veuillez saisir un numéro valide.") 
+        else: 
+            if operateur == "mtn": 
+                status, result = depot_mtn(numero, montant) 
+                
+                if status == 202: 
+                    messages.success(request, f"Dépôt de {montant} FCFA depuis {numero} via MTN Money effectué avec succès.") 
+                    request.user.profile.solde += montant 
+                    request.user.profile.save() 
+                else: 
+                    messages.error(request, f"Erreur MTN Money: {result}") 
+                
+            elif operateur == "orange": 
+                status, result = depot_orange(numero, montant) 
+                if status == 200: 
+                    messages.success(request, f"Dépôt de {montant} FCFA depuis {numero} via Orange Money effectué avec succès.") 
+                    request.user.profile.solde += montant 
+                    request.user.profile.save() 
+                else: 
+                    messages.error(request, f"Erreur Orange Money: {result}") 
+            else: 
+                messages.error(request, "Opérateur non reconnu.") 
+                return redirect("transaction_depot") 
+    return render(request, "transactions/depot.html")
+
+@login_required
+def transaction_virement(request):
+    return render(request, "transactions/virement.html")
+
+import random
+
+@login_required
+def creer_compte(request):
+    if request.method == "POST":
+        type_compte = request.POST.get("type")
+        solde_initial = request.POST.get("solde")
+        currency = request.POST.get("currency", "XAF")  # valeur par défaut si non fourni
+
+        # Génération d'un numéro de compte aléatoire (16 chiffres)
+        nombre = ""
+        for i in range(16):
+            aleatoire = random.randint(0, 9)
+            nombre += str(aleatoire)
+
+        # Création du compte
+        Compte.objects.create(
+            proprietaire=request.user,
+            type=type_compte,
+            solde=solde_initial,
+            numero_compte=nombre,
+            status="actif",
+            currency=currency
+        )
+
+        messages.success(request, f"Compte créé avec succès en {currency}.")
+        return redirect("mes_comptes")
+
+    return render(request, "comptes/creer_compte.html")
+
+
+import requests
+
+def retrait_mtn(numero, montant):
+    # Credentials (à récupérer via MTN Developer Portal)
+    subscription_key = "TON_SUBSCRIPTION_KEY"
+    api_user = "TON_API_USER"
+    api_key = "TON_API_KEY"
+    base_url = "https://sandbox.momodeveloper.mtn.com"
+
+    # 1. Obtenir un token
+    token_url = f"{base_url}/collection/token/"
+    headers = {
+        "Ocp-Apim-Subscription-Key": subscription_key,
+        "Authorization": f"Basic {api_user}:{api_key}"
+    }
+    token_response = requests.post(token_url, headers=headers)
+    access_token = token_response.json().get("access_token")
+
+    # 2. Initier la transaction
+    request_url = f"{base_url}/collection/v1_0/requesttopay"
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "X-Reference-Id": "transaction12345",  # ID unique
+        "X-Target-Environment": "sandbox",
+        "Ocp-Apim-Subscription-Key": subscription_key,
+        "Content-Type": "application/json"
+    }
+    body = {
+        "amount": str(montant),
+        "currency": "XAF",
+        "externalId": "123456",
+        "payer": {
+            "partyIdType": "MSISDN",
+            "partyId": numero
+        },
+        "payerMessage": "Retrait",
+        "payeeNote": "Retrait via MTN Money"
+    }
+    response = requests.post(request_url, headers=headers, json=body)
+
+    return response.status_code, response.json()
+
+def retrait_orange(numero, montant):
+    base_url = "https://api.orange.com/orange-money-webpay/cm/v1"
+    client_id = "TON_CLIENT_ID"
+    client_secret = "TON_CLIENT_SECRET"
+
+    # 1. Obtenir un token
+    token_url = "https://api.orange.com/oauth/v2/token"
+    data = {"grant_type": "client_credentials"}
+    headers = {"Authorization": f"Basic {client_id}:{client_secret}"}
+    token_response = requests.post(token_url, data=data, headers=headers)
+    access_token = token_response.json().get("access_token")
+
+    # 2. Initier la transaction
+    request_url = f"{base_url}/transactions"
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+    body = {
+        "amount": str(montant),
+        "currency": "XAF",
+        "receiver": numero,
+        "description": "Retrait via Orange Money"
+    }
+    response = requests.post(request_url, headers=headers, json=body)
+
+    return response.status_code, response.json()
+
+def depot_mtn(numero, montant):
+    # Vérification simple du numéro MTN
+    if str(numero).startswith(("67", "68")):
+        # Simulation d'appel API MTN
+        return 202, "Transaction validée"
+    return 400, "Numéro MTN invalide"
+
+def depot_orange(numero, montant):
+    # Vérification simple du numéro Orange
+    if str(numero).startswith(("69", "65")):
+        # Simulation d'appel API Orange
+        return 200, "Transaction validée"
+    return 400, "Numéro Orange invalide"
+
+from django.http import JsonResponse
+
+def get_compte_info(request):
+    numero = request.GET.get("numero")
+    try:
+        compte = Compte.objects.get(numero_compte=numero)
+        data = {
+            "nom": compte.proprietaire.get_full_name() or compte.proprietaire.username,
+            "type": compte.type,
+        }
+        return JsonResponse({"status": "ok", "data": data})
+    except Compte.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Compte introuvable"})

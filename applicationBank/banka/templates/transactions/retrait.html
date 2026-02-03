@@ -1,0 +1,35 @@
+{% extends 'banka/base.html' %}
+{% block content %}
+<div class="container mt-5">
+<h2>Retrait</h2>
+<p>Solde disponible : {{ solde }} FCFA</p>
+
+<form method="post">
+    {% csrf_token %}
+    <label for="montant">Montant :</label>
+    <input type="number" name="montant" step="0.01" required>
+
+    <label for="numero">Numéro bénéficiaire :</label>
+    <input type="text" name="numero" placeholder="Ex: 670000000" required>
+
+    <label for="operateur">Choisir l'opérateur :</label>
+    <select name="operateur" required>
+        <option value="mtn">MTN Money</option>
+        <option value="orange">Orange Money</option>
+    </select>
+
+    <button type="submit">Retirer</button>
+</form>
+
+<!-- Logos -->
+<div style="margin-top:20px;">
+    <img src="{% static 'images/mtn_logo.png' %}" alt="MTN Money" width="100">
+    <img src="{% static 'images/orange_logo.png' %}" alt="Orange Money" width="100">
+</div>
+
+{% for message in messages %}
+    <p>{{ message }}</p>
+{% endfor %}
+
+</div>
+{% endblock %}

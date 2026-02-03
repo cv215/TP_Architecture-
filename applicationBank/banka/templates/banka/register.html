@@ -24,6 +24,7 @@
                     {% csrf_token %}
 
                     <div class="mb-3">
+                        <span class="input-group-text"><i class="bi bi-person"></i></span>
                         <label>Nom</label>
                         <input type="text" name="nom" class="form-control" placeholder="Dupo" required>
                     </div>
@@ -35,15 +36,17 @@
 
                     <div class="mb-3">
                         <label>Age</label>
-                        <input type="number" name="age" class="form-control" placeholder="18" min="21" max="120" required>
+                        <input type="number" name="age" class="form-control" placeholder="l'age minimale est de 21 ans" min="21" max="120" required>
                     </div>
         
                     <div class="mb-3">
+                        <span class="input-group-text"><i class="bi bi-envelope"></i></span>
                         <label>Adresse email</label>
                         <input type="email" name="email" class="form-control" placeholder="brenda@gmail.com" required>
                     </div>
 
                     <div class="mb-3">
+                        <span class="input-group-text"><i class="bi bi-telephone"></i></span>
                         <label>Numéro de téléphone</label>
                         <input type="tel" name="telephone" class="form-control" placeholder="+237650263884" required>
                     </div>
@@ -70,23 +73,26 @@
                     </div>
                     
                     <div class="mb-3">
+                        <span class="input-group-text"><i class="bi bi-lock"></i></span>
                         <label>Mot de passe</label>
                         <input type="password" name="password1" class="form-control" required>
                     </div>
 
                     <div class="mb-3">
+                        <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
                         <label>Confirmer mot de passe</label>
                         <input type="password" name="password2" class="form-control" required>
                     </div>
 
                     <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-check-circle"></i>
                         Créer mon compte
                     </button>
                 </form>
 
                 <div class="text-center mt-3">
                     <p>
-                        Vous avez déjà un compte?
+                        <small>Vous avez déjà un compte?
                         <a href="{% url 'login' %}">Se connecter</a>
                     </p>
                 </div>

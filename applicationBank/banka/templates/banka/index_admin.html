@@ -1,4 +1,89 @@
-{% extends "banka/base.html" %}
+{% extends 'banka/base.html' %}
 {% block content %}
-<h1>Welcome to page admin</h1>
+<div class="container mt-5">
+    <div class="alert alert-info text-center" role="alert">
+        Bienvenue sur l'espace administrateur de SecuryBank. 
+        Vous pouvez gérer les comptes, suivre les transactions et consulter les messages des clients.
+    </div>
+
+    <h2 class="mb-4">Tableau de bord Administrateur</h2>
+    <div class="row mt-4">
+      <div class="col-md-4">
+        <div class="card text-bg-primary mb-3">
+          <div class="card-body">
+            <h5 class="card-title">Comptes actifs</h5>
+            <p class="card-text">{{ nb_comptes }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card text-bg-success mb-3">
+          <div class="card-body">
+            <h5 class="card-title">Transactions du jour</h5>
+            <p class="card-text">{{ nb_transactions }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card text-bg-danger mb-3">
+          <div class="card-body">
+            <h5 class="card-title">Alertes fraude</h5>
+            <p class="card-text">{{ nb_alertes }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Graphique -->
+    <div class="card mb-4">
+      <div class="card-body">
+        <h5 class="card-title">Évolution des transactions (7 derniers jours)</h5>
+        <canvas id="transactionsChart"></canvas>
+      </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const ctx = document.getElementById('transactionsChart').getContext('2d');
+  const transactionsChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: {{ labels|safe }},
+      datasets: [
+        {
+          label: 'Dépôts',
+          data: {{ depots|safe }},
+          borderColor: 'rgba(75, 192, 192, 1)',
+          backgroundColor: 'rgba(75, 192, 192, 0.2)',
+          fill: true,
+          tension: 0.3
+        },
+        {
+          label: 'Retraits',
+          data: {{ retraits|safe }},
+          borderColor: 'rgba(255, 99, 132, 1)',
+          backgroundColor: 'rgba(255, 99, 132, 0.2)',
+          fill: true,
+          tension: 0.3
+        },
+        {
+          label: 'Virements',
+          data: {{ virements|safe }},
+          borderColor: 'rgba(54, 162, 235, 1)',
+          backgroundColor: 'rgba(54, 162, 235, 0.2)',
+          fill: true,
+          tension: 0.3
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'top' },
+        title: { display: true, text: 'Transactions des 7 derniers jours' }
+      }
+    }
+  });
+</script>
 {% endblock %}

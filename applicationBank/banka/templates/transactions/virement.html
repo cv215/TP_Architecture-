@@ -1,0 +1,48 @@
+{% extends 'banka/base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <div class="card shadow-lg p-4">
+        <h2 class="mb-4 text-center text-primary">Effectuer un virement</h2>
+        <form method="post">
+            {% csrf_token %}
+            
+            <!-- Compte destination -->
+            <div class="mb-3">
+                <label for="compte_destination" class="form-label">Compte Destination</label>
+                <input type="text" class="form-control" id="compte_destination" placeholder="Entrez le numéro du compte destination" name="compte_destination" required>
+                <small id="compte_info" class="text-muted"></small>
+            </div>
+
+            <!-- Montant -->
+            <div class="mb-3">
+                <label for="montant" class="form-label">Montant</label>
+                <input type="number" class="form-control" id="montant" placeholder="Montant minimum 5000 FCFA" min="5000" name="montant" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">Valider le virement</button>
+        </form>
+    </div>
+</div>
+
+<script>
+document.getElementById("compte_destination").addEventListener("blur", function() {
+    let numero = this.value;
+    if (numero.length > 0) {
+        fetch(`/get-compte-info/?numero=${numero}`)
+            .then(response => response.json())
+            .then(data => {
+                let info = document.getElementById("compte_info");
+                if (data.status === "ok") {
+                    if (data.data.type === "epargne") {
+                        info.innerHTML = "<span class='text-danger'>Erreur : un compte épargne ne peut pas recevoir de virement.</span>";
+                    } else {
+                        info.innerHTML = `Titulaire : <strong>${data.data.nom}</strong> | Type : <strong>${data.data.type}</strong>`;
+                    }
+                } else {
+                    info.innerHTML = "<span class='text-danger'>Compte introuvable.</span>";
+                }
+            });
+    }
+});
+</script>
+{% endblock %}

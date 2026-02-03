@@ -1,0 +1,35 @@
+{% extends 'banka/base.html' %}
+{% block content %}
+<div class="container mt-5">
+  <h2>Effectuer un dépôt</h2>
+  <form method="post">
+    {% csrf_token %}
+    
+    <!-- Montant -->
+    <div class="mb-3">
+      <label for="montant" class="form-label">Montant</label>
+      <input type="number" class="form-control" id="montant" 
+             placeholder="Montant minimum 500 FCFA" min="500" 
+             name="montant" required>
+    </div>
+
+    <!-- Numéro -->
+    <div class="mb-3">
+      <label for="numero" class="form-label">Numéro de téléphone</label>
+      <input type="text" class="form-control" id="numero" 
+             placeholder="Ex: 670123456" name="numero" required>
+    </div>
+
+    <!-- Opérateur -->
+    <div class="mb-3">
+      <label for="operateur" class="form-label">Opérateur</label>
+      <select class="form-select" id="operateur" name="operateur" required>
+        <option value="mtn">MTN Mobile Money</option>
+        <option value="orange">Orange Money</option>
+      </select>
+    </div>
+
+    <button type="submit" class="btn btn-success w-100">Déposer</button>
+  </form>
+</div>
+{% endblock %}

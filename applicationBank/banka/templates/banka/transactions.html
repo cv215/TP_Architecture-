@@ -1,0 +1,36 @@
+{% extends 'banka/base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">Mes Transactions</h2>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Compte Source</th>
+                    <th>Compte Destination</th>
+                    <th>Montant</th>
+                    <th>Type de Transaction</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for transaction in transactions %}
+                <tr>
+                    <td>{{ transaction.date|date:"d/m/Y H:i" }}</td>
+                    <td>{{ transaction.compte_source.numero_compte }}</td>
+                    <td>{{ transaction.compte_destination.numero_compte }}</td>
+                    <td>{{ transaction.montant }} USD</td>
+                    <td>{{ transaction.get_type_display }}</td>
+                    <td>{{ transaction.description }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center">Aucune transaction trouvée.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

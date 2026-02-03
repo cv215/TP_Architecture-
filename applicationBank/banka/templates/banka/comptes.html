@@ -1,0 +1,76 @@
+{% extends 'banka/base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">Mes Comptes Bancaires</h2>
+
+    <!-- Boutons d'action -->
+    <div class="mb-4">
+        <!-- Bouton Créer Compte -->
+        <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#creerCompteModal">
+            Créer un compte
+        </button>
+
+        <!-- Dropdown Transactions -->
+        <div class="btn-group">
+            <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                Effectuer une transaction
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="{% url 'transaction_retrait' %}">Retrait</a></li>
+                <li><a class="dropdown-item" href="{% url 'transaction_depot' %}">Dépôt</a></li>
+                <li><a class="dropdown-item" href="{% url 'transaction_virement' %}">Virement</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Liste des comptes -->
+    <div class="row">
+        {% for compte in comptes %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Compte N°: {{ compte.numero_compte }}</h5>
+                    <p class="card-text">Type: {{ compte.get_type_display }}</p> 
+                    <p class="card-text">Solde: {{ compte.solde }} USD</p>
+                    <p class="card-text">Date de création: {{ compte.date_creation|date:"d/m/Y" }}</p>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <p>Vous n'avez pas encore de comptes bancaires.</p>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Modal Créer Compte -->
+<div class="modal fade" id="creerCompteModal" tabindex="-1" aria-labelledby="creerCompteModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="{% url 'creer_compte' %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="creerCompteModalLabel">Créer un nouveau compte</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+        </div>
+        <div class="modal-body">
+          <!-- Exemple de champs -->
+          <div class="mb-3">
+            <label for="type" class="form-label">Type de compte</label>
+            <select class="form-select" id="type" name="type">
+              <option value="courant">Courant</option>
+              <option value="epargne">Épargne</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="solde" class="form-label">Solde initial</label>
+            <input type="number" class="form-control" id="solde" name="solde" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Créer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
