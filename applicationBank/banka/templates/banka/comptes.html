@@ -3,14 +3,11 @@
 <div class="container mt-5">
     <h2 class="mb-4">Mes Comptes Bancaires</h2>
 
-    <!-- Boutons d'action -->
     <div class="mb-4">
-        <!-- Bouton Créer Compte -->
-        <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#creerCompteModal">
-            Créer un compte
-        </button>
+    <div class="mt-4 text-end">
+        <a href="{% url 'creer_compte' %}" class="btn btn-success">+ Créer un nouveau compte</a>
+    </div>
 
-        <!-- Dropdown Transactions -->
         <div class="btn-group">
             <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                 Effectuer une transaction
@@ -23,7 +20,6 @@
         </div>
     </div>
 
-    <!-- Liste des comptes -->
     <div class="row">
         {% for compte in comptes %}
         <div class="col-md-4 mb-4">
@@ -42,7 +38,7 @@
     </div>
 </div>
 
-<!-- Modal Créer Compte -->
+
 <div class="modal fade" id="creerCompteModal" tabindex="-1" aria-labelledby="creerCompteModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -53,7 +49,6 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
         </div>
         <div class="modal-body">
-          <!-- Exemple de champs -->
           <div class="mb-3">
             <label for="type" class="form-label">Type de compte</label>
             <select class="form-select" id="type" name="type">

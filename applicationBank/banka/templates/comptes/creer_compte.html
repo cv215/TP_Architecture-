@@ -57,6 +57,13 @@
 
 <div class="form-container">
     <h2>Créer un nouveau compte</h2>
+
+{% if warning_text %}
+<div class="alert alert-warning mt-3" role="alert" style="border-radius: 12px; font-weight: 500;">
+    {{ warning_text|safe }}
+</div>
+{% endif %}
+
     <form method="post">
         {% csrf_token %}
         
@@ -69,7 +76,6 @@
             </select>
         </div>  
 
-        <!-- Devise -->
         <div class="mb-3 text-start">
             <label for="currency" class="form-label">Devise</label>
             <select class="form-select" id="currency" name="currency" required>
@@ -79,7 +85,6 @@
             </select>
         </div>
 
-        <!-- Solde initial -->
         <div class="mb-3 text-start">
             <label for="solde" class="form-label">Solde initial</label>
             <input type="number" class="form-control" id="solde" name="solde" min="0" required>

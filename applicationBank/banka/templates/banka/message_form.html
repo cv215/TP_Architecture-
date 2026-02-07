@@ -1,0 +1,56 @@
+{% extends "banka/base.html" %}
+{% load static %}
+{% block content %}
+<div class="container mt-5"> 
+    <div class="row justify-content-center"> 
+        <div class="col-md-8">
+             <div class="card shadow-sm"> 
+                <div class="card-header bg-primary text-white"> 
+                    Envoyer un message 
+                </div> 
+                <div class="card-body"> 
+                    <form method="post" action="{% url 'send_message' %}"> 
+                        {% csrf_token %} 
+                        <div class="mb-3"> 
+                            <label for="recipient" class="form-label">Destinataire</label> 
+                            <select class="form-select" id="recipient" name="recipient"> 
+                                 {% if request.user.is_staff %}
+                                  {% for user in users %}
+                                   {%if not user.is_staff%}
+                                 <option value="{{ user.id }}">{{ user.username }}</option>
+                                   {% endif %} 
+                                  {% endfor %} 
+                                {% else %}
+                                <option value="{{ admin_user.id }}">Administrateur</option>
+                                {% endif %} 
+                            </select> 
+                        </div> 
+                        <div class="mb-3"> 
+                            <label for="content" class="form-label">Message</label> 
+                            <textarea class="form-control" id="content" name="content" rows="4" required></textarea> 
+                        </div> 
+                        <button type="submit" class="btn btn-success">
+                            Envoyer
+                        </button> 
+                    </form> 
+                </div> 
+            </div> 
+            <div class="card mt-4 shadow-sm"> 
+                <div class="card-header bg-secondary text-white"> 
+                    Messages échangés 
+                </div> 
+                <div class="card-body"> 
+                    {% for msg in messages %} 
+                    <div class="alert {% if msg.sender.is_staff %}alert-info{% else %}alert-warning{% endif %}"> 
+                        <strong>{{ msg.sender.username }} :</strong> {{ msg.content }} <br> 
+                        <small class="text-muted">{{ msg.created_at }}</small> 
+                    </div> {% empty %} 
+                    <p class="text-muted">Aucun message pour l’instant.</p> 
+                    {% endfor %} 
+                </div> 
+            </div> 
+        </div> 
+    </div> 
+</div> 
+{% endblock %}
+<script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>

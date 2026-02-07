@@ -16,5 +16,10 @@
         <p>Vous n'avez aucun message.</p>
         {% endfor %}
     </div>
+    <div class="mt-4">
+        <a href="{% url 'send_message' %}" class="btn btn-primary">
+            Envoyer un message
+        </a>
+    </div>
 </div>
 {% endblock %}

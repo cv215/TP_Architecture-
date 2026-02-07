@@ -3,7 +3,7 @@ from django.shortcuts import render,redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 
-from banka.tasks import send_welcome_email
+from .tasks import send_registration_email
 from .models import Compte, Transaction, Event, AuditLog
 from django.contrib.auth.decorators import user_passes_test, login_required
 from django.db.models.signals import post_save
@@ -83,7 +83,10 @@ def register_user(request):
             role = role_instance,
             password=password1)
         user.save()
-        send_welcome_email.delay(user.email, user.username)
+        # Déclenche la tâche Celery → RabbitMQ 
+        send_registration_email.delay(user.email, f"{user.prenom} {user.nom}")
+
+        messages.success(request, "Inscription réussie ! Vérifiez votre email pour confirmation.")
         return redirect("login")
 
     return render(request, "banka/register.html")
@@ -303,8 +306,10 @@ def creer_compte(request):
 
         messages.success(request, f"Compte créé avec succès en {currency}.")
         return redirect("mes_comptes")
+    # Texte d’avertissement envoyé au template 
+    warning_text = ( "⚠️ Important : Seuls les comptes courants sont autorisés à effectuer des virements. " "Toute tentative de virement avec un compte épargne constitue une violation des règles " "et votre transaction sera automatiquement bloquée." )
 
-    return render(request, "comptes/creer_compte.html")
+    return render(request, "comptes/creer_compte.html", {"warning_text": warning_text})
 
 
 import requests
@@ -404,3 +409,184 @@ def get_compte_info(request):
         return JsonResponse({"status": "ok", "data": data})
     except Compte.DoesNotExist:
         return JsonResponse({"status": "error", "message": "Compte introuvable"})
+
+
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib import messages
+from .models import Compte
+
+# Vérifie que l'utilisateur est admin/staff
+def is_admin(user):
+    return user.is_staff or user.is_superuser
+
+@login_required
+@user_passes_test(is_admin)
+def admin_comptes(request):
+    comptes = Compte.objects.all().order_by("-id")
+    return render(request, "admin/comptes.html", {"comptes": comptes})
+
+
+from django.shortcuts import render, redirect, get_object_or_404
+
+
+
+from django.shortcuts import get_object_or_404, redirect, render
+from django.contrib import messages
+from django.contrib.auth.decorators import user_passes_test
+from django.contrib.auth.models import User
+from .models import Compte, Message
+
+@user_passes_test(lambda u: u.is_staff)
+def admin_modifier_compte(request, compte_id):
+    compte = get_object_or_404(Compte, id=compte_id)
+    client = compte.proprietaire
+
+    if request.method == "POST":
+        # Sauvegarder anciennes valeurs
+        ancien_numero = compte.numero_compte
+        ancien_type = compte.type
+        ancien_solde = compte.solde
+        ancienne_currency = compte.currency
+        ancien_nom = client.last_name
+        ancien_prenom = client.first_name
+        ancien_email = client.email
+
+        # Mettre à jour compte
+        compte.numero_compte = request.POST.get("numero_compte")
+        compte.type = request.POST.get("type")
+        compte.solde = request.POST.get("solde")
+        compte.currency = request.POST.get("currency")
+        compte.save()
+
+        # Mettre à jour client
+        client.last_name = request.POST.get("last_name")
+        client.first_name = request.POST.get("first_name")
+        client.email = request.POST.get("email")
+        client.save()
+
+        # Construire message automatique
+        changements = []
+        if compte.numero_compte != ancien_numero:
+            changements.append(f"Numéro de compte: {ancien_numero} → {compte.numero_compte}")
+        if compte.type != ancien_type:
+            changements.append(f"Type: {ancien_type} → {compte.type}")
+        if str(compte.solde) != str(ancien_solde):
+            changements.append(f"Solde: {ancien_solde} → {compte.solde}")
+        if compte.currency != ancienne_currency:
+            changements.append(f"Devise: {ancienne_currency} → {compte.currency}")
+        if client.last_name != ancien_nom:
+            changements.append(f"Nom: {ancien_nom} → {client.last_name}")
+        if client.first_name != ancien_prenom:
+            changements.append(f"Prénom: {ancien_prenom} → {client.first_name}")
+        if client.email != ancien_email:
+            changements.append(f"Email: {ancien_email} → {client.email}")
+
+        if changements:
+            contenu = "Vos informations ont été modifiées par l’administrateur:\n" + "\n".join(changements)
+            Message.objects.create(
+                sender=request.user,
+                recipient=client,
+                content=contenu
+            )
+
+        messages.success(request, "Compte et informations du client modifiés avec succès.")
+        return redirect("gerer_comptes")
+
+    return render(request, "banka/modifier_compte.html", {"compte": compte, "client": client})
+
+
+
+def admin_supprimer_compte(request, compte_id):
+    compte = get_object_or_404(Compte, id=compte_id)
+    compte.delete()
+    messages.success(request, "Compte supprimé.")
+    return redirect("gerer_comptes")
+
+
+def admin_suspendre_compte(request, compte_id):
+    compte = get_object_or_404(Compte, id=compte_id)
+
+    if compte.status == "actif":
+        compte.status = "inactif"
+        messages.warning(request, "Compte suspendu.")
+    else:
+        compte.status = "actif"
+        messages.success(request, "Compte réactivé.")
+
+    compte.save()
+    return redirect("gerer_comptes")
+
+def gerer_comptes(request):
+    comptes = Compte.objects.all()
+    return render(request, "banka/gerer_comptes.html", {"comptes": comptes})
+
+
+from .models import Message
+from .tasks import handle_message_created, send_registration_email
+
+@login_required
+def send_message(request):
+    if request.method == "POST":
+        recipient_id = request.POST.get("recipient")
+        content = request.POST.get("content")
+
+        if recipient_id == "admin":
+            recipient = User.objects.filter(is_staff=True).first()
+        else:
+            recipient = User.objects.get(id=recipient_id)
+
+        msg = Message.objects.create(
+            sender=request.user,
+            recipient=recipient,
+            content=content
+        )
+
+        handle_message_created.delay(msg.id)
+        return redirect("send_message")
+
+    users = User.objects.all()
+    admin_user = User.objects.filter(is_staff=True).first()
+    messages = Message.objects.all().order_by("-created_at")
+    return render(request, "banka/message_form.html", {
+        "messages": messages,
+        "users": users,
+        "admin_user": admin_user
+    })
+
+
+
+@login_required
+def transaction_list(request):
+    if not request.user.is_staff:
+        # seuls les admins peuvent voir la liste
+        return render(request, "unauthorized.html")
+
+    transactions = Transaction.objects.all().order_by("-date_transaction")
+    return render(request, "banka/transactions.html", {"transactions": transactions})
+
+@login_required
+def client_transactions(request):
+    # Le client ne voit que ses transactions
+    transactions = Transaction.objects.filter(compte_source=request.user).order_by("-date_transaction")
+    return render(request, "client_transactions.html", {"transactions": transactions})
+
+from django.contrib.auth.decorators import user_passes_test
+
+@user_passes_test(lambda u: u.is_staff)
+def fraud_list(request):
+    blocked = Transaction.objects.filter(fraud_alerts__isnull=False, statut="blocked")
+    return render(request, "banka/fraud_list.html", {"blocked": blocked})
+
+@user_passes_test(lambda u: u.is_staff)
+def validate_transaction(request, tx_id):
+    tx = Transaction.objects.get(id=tx_id)
+    tx.statut = "success"
+    tx.fraud_flag = False
+    tx.save()
+    return redirect("fraud_list")
+
+
+
+
+

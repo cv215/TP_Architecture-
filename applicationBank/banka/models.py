@@ -57,10 +57,13 @@ class User(AbstractBaseUser, PermissionsMixin):
         return f"{self.prenom} {self.nom} - {self.email}"
     
 class Compte(models.Model):
+    TYPE_CHOICES = [ ("courant", "Courant"), ("epargne", "Épargne"), ] 
+    STATUS_CHOICES = [ ("actif", "Actif"), ("inactif", "Inactif"), ]
     numero_compte = models.CharField(max_length=20, unique=True)
     solde = models.DecimalField(max_digits=15, decimal_places=2)
     proprietaire = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comptes')
-    status = models.CharField(max_length=50)
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default="actif")
+    type = models.CharField(max_length=50, choices=TYPE_CHOICES)
     currency = models.CharField(max_length=10)
     date_creation = models.DateTimeField(auto_now_add=True)
     date_modification = models.DateTimeField(auto_now=True)
@@ -191,3 +194,10 @@ class Profile(models.Model):
 
     def __str__(self):
         return f"Profil de {self.user.username}"
+
+class Message(models.Model):
+    sender = models.ForeignKey(User, related_name="sent_messages", on_delete=models.CASCADE)
+    recipient = models.ForeignKey(User, related_name="received_messages", on_delete=models.CASCADE)
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)

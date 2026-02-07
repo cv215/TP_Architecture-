@@ -1,36 +1,74 @@
 {% extends 'banka/base.html' %}
+{% load static %}
 {% block content %}
+
+ {% if request.user.is_staff %}
+<div class="container mt-5">
+    <h2 class="mb-4">Bienvenue dans la Liste des Transactions éffectuées par les clients</h2>
+    <table class="table table-striped table-hover shadow-sm">
+        <thead class="table-dark">
+            <tr>
+                <th>Client (source)</th> 
+                <th>Compte destination</th>
+                <th>Type de transaction</th>
+                <th>Montant</th>
+                <th>Status</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in transactions %}
+            <tr>
+                <td>{{ t.compte_source }}</td> 
+                <td>{{ t.compte_destination }}</td>
+                <td>{{ t.get_type_transaction_display }}</td>
+                <td>{{ t.montant }} FCFA</td>
+                <td>{{ t.status }}</td>
+                <td>{{ t.date_transaction|date:"d/m/Y H:i" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" class="text-center text-muted">Aucune transaction enregistrée</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
 <div class="container mt-5">
     <h2 class="mb-4">Mes Transactions</h2>
-    <div class="table-responsive">
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Compte Source</th>
-                    <th>Compte Destination</th>
-                    <th>Montant</th>
-                    <th>Type de Transaction</th>
-                    <th>Description</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for transaction in transactions %}
-                <tr>
-                    <td>{{ transaction.date|date:"d/m/Y H:i" }}</td>
-                    <td>{{ transaction.compte_source.numero_compte }}</td>
-                    <td>{{ transaction.compte_destination.numero_compte }}</td>
-                    <td>{{ transaction.montant }} USD</td>
-                    <td>{{ transaction.get_type_display }}</td>
-                    <td>{{ transaction.description }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6" class="text-center">Aucune transaction trouvée.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+    <table class="table table-bordered table-hover shadow-sm">
+        <thead class="table-primary">
+            <tr>
+                <th>Type</th>
+                <th>Montant</th>
+                <th>Date</th>
+                <th>Statut</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in transactions %}
+            <tr>
+                <td>{{ t.get_type_transaction_display }}</td>
+                <td>{{ t.montant }} FCFA</td>
+                <td>{{ t.date_transaction|date:"d/m/Y H:i" }}</td>
+                <td>{{ t.statut }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" class="text-center text-muted">Aucune transaction enregistrée</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-warning">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
 </div>
+{% endif %}
 {% endblock %}

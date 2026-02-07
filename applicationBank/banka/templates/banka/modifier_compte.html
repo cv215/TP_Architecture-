@@ -1,0 +1,58 @@
+{% extends "banka/base.html" %} {% block content %}
+<div class="container mt-5">
+  <div class="card shadow-lg">
+    <div class="card-header bg-primary text-white">
+      Vous avez la possibilité de modifier les informations de ce client.
+    </div>
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+        <h5>Informations du client</h5>
+        <table class="table table-bordered">
+          <tr>
+            <th>Nom</th>
+            <td>{{ client_form.nom }}</td>
+          </tr>
+          <tr>
+            <th>Prénom</th>
+            <td>{{ client_form.prenom }}</td>
+          </tr>
+          <tr>
+            <th>Âge</th>
+            <td>{{ client_form.age }}</td>
+          </tr>
+          <tr>
+            <th>Email</th>
+            <td>{{ client_form.email }}</td>
+          </tr>
+          <tr>
+            <th>Téléphone</th>
+            <td>{{ client_form.telephone }}</td>
+          </tr>
+          <tr>
+            <th>Adresse</th>
+            <td>{{ client_form.adresse }}</td>
+          </tr>
+          <tr>
+            <th>Pays</th>
+            <td>{{ client_form.pays }}</td>
+          </tr>
+          <tr>
+            <th>Ville</th>
+            <td>{{ client_form.ville }}</td>
+          </tr>
+        </table>
+
+        <div class="mt-3">
+          <button type="submit" class="btn btn-success">
+            <i class="fas fa-save"></i> Enregistrer
+          </button>
+          <a href="{% url 'gerer_comptes' %}" class="btn btn-secondary"
+            >Annuler</a
+          >
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
