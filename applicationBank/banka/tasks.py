@@ -7,10 +7,10 @@ from django.contrib.auth.models import User
 from django.conf import settings
 
 @shared_task
-def send_registration_email(user_email, full_name):
+def send_registration_email(user_email):
     subject = "Bienvenue sur SecuryBank"
     message = (
-        f"Bonjour {full_name},\n\n"
+        f"Bonjour,\n\n"
         "Votre inscription sur la plateforme SecuryBank a été validée avec succès.\n"
         "Vous pouvez désormais profiter de nos services bancaires sécurisés.\n\n"
         "L’équipe SecuryBank."

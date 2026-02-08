@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 
 # Create your models here.
@@ -28,6 +29,7 @@ class ClientsManager(BaseUserManager):
         extra_fields['role'] = role_admin
 
         return self.create_user(nom, email, password, **extra_fields)
+    
 class User(AbstractBaseUser, PermissionsMixin):
     nom = models.CharField(max_length=100)
     prenom = models.CharField(max_length=100, null=True, blank=True)
@@ -61,7 +63,8 @@ class Compte(models.Model):
     STATUS_CHOICES = [ ("actif", "Actif"), ("inactif", "Inactif"), ]
     numero_compte = models.CharField(max_length=20, unique=True)
     solde = models.DecimalField(max_digits=15, decimal_places=2)
-    proprietaire = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comptes')
+    proprietaire = models.ForeignKey(settings.AUTH_USER_MODEL,
+    on_delete=models.CASCADE,related_name='comptes')
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default="actif")
     type = models.CharField(max_length=50, choices=TYPE_CHOICES)
     currency = models.CharField(max_length=10)
@@ -193,7 +196,7 @@ class Profile(models.Model):
     currency = models.CharField(max_length=3, default="XAF")
 
     def __str__(self):
-        return f"Profil de {self.user.username}"
+        return f"Profil de {self.user.email}"
 
 class Message(models.Model):
     sender = models.ForeignKey(User, related_name="sent_messages", on_delete=models.CASCADE)

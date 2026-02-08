@@ -51,6 +51,7 @@ def register_user(request):
         prenom = request.POST["prenom"]
         age = request.POST["age"]
         adresse = request.POST["adresse"]
+        telephone = request.POST["telephone"]
         email = request.POST["email"]
         ville = request.POST["ville"]
         pays = request.POST["pays"]
@@ -84,7 +85,7 @@ def register_user(request):
             password=password1)
         user.save()
         # Déclenche la tâche Celery → RabbitMQ 
-        send_registration_email.delay(user.email, f"{user.prenom} {user.nom}")
+        send_registration_email.delay(user.email)
 
         messages.success(request, "Inscription réussie ! Vérifiez votre email pour confirmation.")
         return redirect("login")
@@ -427,14 +428,6 @@ def admin_comptes(request):
     return render(request, "admin/comptes.html", {"comptes": comptes})
 
 
-from django.shortcuts import render, redirect, get_object_or_404
-
-
-
-from django.shortcuts import get_object_or_404, redirect, render
-from django.contrib import messages
-from django.contrib.auth.decorators import user_passes_test
-from django.contrib.auth.models import User
 from .models import Compte, Message
 
 @user_passes_test(lambda u: u.is_staff)
@@ -443,44 +436,48 @@ def admin_modifier_compte(request, compte_id):
     client = compte.proprietaire
 
     if request.method == "POST":
-        # Sauvegarder anciennes valeurs
-        ancien_numero = compte.numero_compte
-        ancien_type = compte.type
-        ancien_solde = compte.solde
-        ancienne_currency = compte.currency
-        ancien_nom = client.last_name
-        ancien_prenom = client.first_name
+        # Anciennes valeurs
+        ancien_nom = client.nom
+        ancien_prenom = client.prenom
         ancien_email = client.email
+        ancien_tel = client.telephone
+        ancienne_adresse = client.adresse
+        ancien_pays = client.pays
+        ancienne_ville = client.ville
 
-        # Mettre à jour compte
+        # Mise à jour compte
         compte.numero_compte = request.POST.get("numero_compte")
         compte.type = request.POST.get("type")
         compte.solde = request.POST.get("solde")
         compte.currency = request.POST.get("currency")
         compte.save()
 
-        # Mettre à jour client
-        client.last_name = request.POST.get("last_name")
-        client.first_name = request.POST.get("first_name")
+        # Mise à jour client
+        client.nom = request.POST.get("nom")
+        client.prenom = request.POST.get("prenom")
         client.email = request.POST.get("email")
+        client.telephone = request.POST.get("telephone")
+        client.adresse = request.POST.get("adresse")
+        client.pays = request.POST.get("pays")
+        client.ville = request.POST.get("ville")
         client.save()
 
         # Construire message automatique
         changements = []
-        if compte.numero_compte != ancien_numero:
-            changements.append(f"Numéro de compte: {ancien_numero} → {compte.numero_compte}")
-        if compte.type != ancien_type:
-            changements.append(f"Type: {ancien_type} → {compte.type}")
-        if str(compte.solde) != str(ancien_solde):
-            changements.append(f"Solde: {ancien_solde} → {compte.solde}")
-        if compte.currency != ancienne_currency:
-            changements.append(f"Devise: {ancienne_currency} → {compte.currency}")
-        if client.last_name != ancien_nom:
-            changements.append(f"Nom: {ancien_nom} → {client.last_name}")
-        if client.first_name != ancien_prenom:
-            changements.append(f"Prénom: {ancien_prenom} → {client.first_name}")
+        if client.nom != ancien_nom:
+            changements.append(f"Nom: {ancien_nom} → {client.nom}")
+        if client.prenom != ancien_prenom:
+            changements.append(f"Prénom: {ancien_prenom} → {client.prenom}")
         if client.email != ancien_email:
             changements.append(f"Email: {ancien_email} → {client.email}")
+        if client.telephone != ancien_tel:
+            changements.append(f"Téléphone: {ancien_tel} → {client.telephone}")
+        if client.adresse != ancienne_adresse:
+            changements.append(f"Adresse: {ancienne_adresse} → {client.adresse}")
+        if client.pays != ancien_pays:
+            changements.append(f"Pays: {ancien_pays} → {client.pays}")
+        if client.ville != ancienne_ville:
+            changements.append(f"Ville: {ancienne_ville} → {client.ville}")
 
         if changements:
             contenu = "Vos informations ont été modifiées par l’administrateur:\n" + "\n".join(changements)
@@ -559,7 +556,6 @@ def send_message(request):
 @login_required
 def transaction_list(request):
     if not request.user.is_staff:
-        # seuls les admins peuvent voir la liste
         return render(request, "unauthorized.html")
 
     transactions = Transaction.objects.all().order_by("-date_transaction")
@@ -567,7 +563,6 @@ def transaction_list(request):
 
 @login_required
 def client_transactions(request):
-    # Le client ne voit que ses transactions
     transactions = Transaction.objects.filter(compte_source=request.user).order_by("-date_transaction")
     return render(request, "client_transactions.html", {"transactions": transactions})
 
