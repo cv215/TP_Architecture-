@@ -1,4 +1,3 @@
-# users/tasks.py
 from celery import shared_task
 from django.core.mail import send_mail
 from .models import Message
@@ -28,13 +27,11 @@ def send_registration_email(user_email):
 @shared_task
 def handle_message_created(message_id):
     message = Message.objects.get(id=message_id)
-    # Exemple : notifier l’admin
     print(f"New message from {message.sender}: {message.content}")
 
 @shared_task
 def handle_message_replied(message_id):
     message = Message.objects.get(id=message_id)
-    # Exemple : notifier le client
     print(f"Admin replied: {message.content}")
     
 
@@ -52,11 +49,8 @@ from django.conf import settings
 def handle_fraud_detected(user_id, transaction_id):
     user = User.objects.get(id=user_id)
     tx = Transaction.objects.get(id=transaction_id)
-
-    # Notifier l’admin (exemple console ou email)
     print(f"⚠️ FRAUDE détectée : {user.username} a échoué 5 fois. Transaction {tx.id} bloquée.")
 
-    # Envoyer un email au client
     send_mail(
         subject="Alerte fraude sur votre compte",
         message=(
@@ -69,3 +63,24 @@ def handle_fraud_detected(user_id, transaction_id):
         recipient_list=[user.email],
         fail_silently=False,
     )
+    
+# tasks.py
+from celery import shared_task
+from django.core.mail import send_mail
+from django.contrib.auth.models import User
+
+@shared_task
+def envoyer_alerte_fraude(user_id, type_compte):
+    user = User.objects.get(id=user_id)
+    message = (
+        f"Alerte fraude : L'utilisateur {user.username} a tenté de créer "
+        f"un deuxième compte {type_compte}."
+    )
+    # Exemple : envoi d'un email à l'admin
+    send_mail(
+        subject="Alerte fraude - Tentative de double compte",
+        message=message,
+        from_email="tangoua8@gmail.com",
+        recipient_list=["admin@banque.com"],
+    )
+

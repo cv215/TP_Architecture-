@@ -2,7 +2,7 @@
 <div class="container mt-5">
   <div class="card shadow-lg">
     <div class="card-header bg-primary text-white">
-      Vous avez la possibilité de modifier les informations de ce client.
+      Vous avez la possibilité de modifier les informations de {{ client.nom }} {{ client.prenom }}.
     </div>
     <div class="card-body">
       <form method="post">
@@ -11,38 +11,176 @@
         <table class="table table-bordered">
           <tr>
             <th>Nom</th>
-            <td>{{ client_form.nom }}</td>
+            <td>
+              <input
+                type="text"
+                name="nom"
+                value="{{ client.nom }}"
+                class="form-control"
+              />
+            </td>
           </tr>
           <tr>
             <th>Prénom</th>
-            <td>{{ client_form.prenom }}</td>
+            <td>
+              <input
+                type="text"
+                name="prenom"
+                value="{{ client.prenom }}"
+                class="form-control"
+              />
+            </td>
           </tr>
           <tr>
             <th>Âge</th>
-            <td>{{ client_form.age }}</td>
+            <td>
+              <input
+                type="number"
+                name="age"
+                value="{{ client.age }}"
+                class="form-control"
+              />
+            </td>
           </tr>
           <tr>
             <th>Email</th>
-            <td>{{ client_form.email }}</td>
+            <td>
+              <input
+                type="email"
+                name="email"
+                value="{{ client.email }}"
+                class="form-control"
+              />
+            </td>
           </tr>
           <tr>
             <th>Téléphone</th>
-            <td>{{ client_form.telephone }}</td>
+            <td>
+              <input
+                type="text"
+                name="telephone"
+                value="{{ client.telephone }}"
+                class="form-control"
+              />
+            </td>
           </tr>
           <tr>
             <th>Adresse</th>
-            <td>{{ client_form.adresse }}</td>
+            <td>
+              <input
+                type="text"
+                name="adresse"
+                value="{{ client.adresse }}"
+                class="form-control"
+              />
+            </td>
           </tr>
           <tr>
             <th>Pays</th>
-            <td>{{ client_form.pays }}</td>
+            <td>
+              <input
+                type="text"
+                name="pays"
+                value="{{ client.pays }}"
+                class="form-control"
+              />
+            </td>
           </tr>
           <tr>
             <th>Ville</th>
-            <td>{{ client_form.ville }}</td>
+            <td>
+              <input
+                type="text"
+                name="ville"
+                value="{{ client.ville }}"
+                class="form-control"
+              />
+            </td>
           </tr>
         </table>
 
+        <h5>Informations du compte</h5>
+        <table class="table table-bordered">
+          <tr>
+            <th>Numéro de compte</th>
+            <td>
+              <input
+                type="text"
+                name="numero_compte"
+                value="{{ compte.numero_compte }}"
+                class="form-control"
+                readonly
+              />
+            </td>
+          </tr>
+          <tr>
+            <th>Type</th>
+            <td>
+              <select name="type" class="form-control">
+                <option
+                  value="Courant"
+                  {%
+                  if
+                  compte.type=""
+                  ="Courant"
+                  %}selected{%
+                  endif
+                  %}
+                >
+                  Courant
+                </option>
+                <option
+                  value="Épargne"
+                  {%
+                  if
+                  compte.type=""
+                  ="Épargne"
+                  %}selected{%
+                  endif
+                  %}
+                >
+                  Épargne
+                </option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <th>Solde</th>
+            <td>
+              <input
+                type="number"
+                step="0.01"
+                name="solde"
+                value="{{ compte.solde }}"
+                class="form-control"
+                readonly
+              />
+            </td>
+          </tr>
+          <tr>
+            <th>Devise</th>
+            <td>
+              <input
+                type="text"
+                name="currency"
+                value="{{ compte.currency }}"
+                class="form-control"
+              />
+            </td>
+          </tr>
+          <tr>
+            <th>Statut</th>
+            <td>
+              <input
+                type="text"
+                name="status"
+                value="{{ compte.status }}"
+                class="form-control"
+                readonly
+              />
+            </td>
+          </tr>
+        </table>
         <div class="mt-3">
           <button type="submit" class="btn btn-success">
             <i class="fas fa-save"></i> Enregistrer

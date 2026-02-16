@@ -17,7 +17,7 @@
                                  {% if request.user.is_staff %}
                                   {% for user in users %}
                                    {%if not user.is_staff%}
-                                 <option value="{{ user.id }}">{{ user.username }}</option>
+                                 <option value="{{ user.id }}">{{ user.nom }}</option>
                                    {% endif %} 
                                   {% endfor %} 
                                 {% else %}
@@ -42,7 +42,7 @@
                 <div class="card-body"> 
                     {% for msg in messages %} 
                     <div class="alert {% if msg.sender.is_staff %}alert-info{% else %}alert-warning{% endif %}"> 
-                        <strong>{{ msg.sender.username }} :</strong> {{ msg.content }} <br> 
+                        <strong>{{ msg.sender.nom }} :</strong> {{ msg.content }} <br> 
                         <small class="text-muted">{{ msg.created_at }}</small> 
                     </div> {% empty %} 
                     <p class="text-muted">Aucun message pour l’instant.</p> 

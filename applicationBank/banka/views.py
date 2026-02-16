@@ -4,11 +4,10 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 
 from .tasks import send_registration_email
-from .models import Compte, Transaction, Event, AuditLog
 from django.contrib.auth.decorators import user_passes_test, login_required
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from .models import User, Event, AuditLog,Role,Profile,Transaction
+from .models import User, Event, AuditLog,Role,Profile,Transaction,FraudAlert,Compte
 from django.utils.timezone import now
 from datetime import timedelta
 from django.db.models import Sum
@@ -84,7 +83,6 @@ def register_user(request):
             role = role_instance,
             password=password1)
         user.save()
-        # Déclenche la tâche Celery → RabbitMQ 
         send_registration_email.delay(user.email)
 
         messages.success(request, "Inscription réussie ! Vérifiez votre email pour confirmation.")
@@ -95,7 +93,6 @@ def register_user(request):
 @receiver(post_save, sender=User)
 def user_created_event(sender, instance, created, **kwargs):
     if created:
-        # Créer un événement
         event = Event.objects.create(
             nom="USER_CREATED",
             source_service="UserService",
@@ -103,7 +100,6 @@ def user_created_event(sender, instance, created, **kwargs):
             date_debut=instance.date_creation,
             date_fin=instance.date_creation
         )
-        # Créer un audit log lié
         AuditLog.objects.create(
             utilisateur=instance,
             event=event,
@@ -181,7 +177,6 @@ def index_admin(request):
     }
     return render(request, "banka/index_admin.html", context)
 
-
 @login_required
 def comptes(request):
 
@@ -199,14 +194,14 @@ def messageries(request):
 
 @login_required
 def transaction_retrait(request):
-    solde = request.user.profile.solde  # Exemple: solde stocké dans le profil utilisateur
+    solde = request.user.profile.solde 
     profile, created = Profile.objects.get_or_create(user=request.user)
     
     if request.method == "POST":
         try:
             montant = float(request.POST.get("montant"))
-            operateur = request.POST.get("operateur")  # "mtn" ou "orange"
-            numero = request.POST.get("numero")       # numéro du bénéficiaire
+            operateur = request.POST.get("operateur") 
+            numero = request.POST.get("numero")      
         except (TypeError, ValueError):
             messages.error(request, "Montant invalide.")
             return redirect("transaction_retrait")
@@ -218,26 +213,20 @@ def transaction_retrait(request):
         elif not numero or len(numero) < 8:
             messages.error(request, "Veuillez saisir un numéro valide.")
         else:
-            # Ici tu intègres l’API MTN ou Orange Money
             if operateur == "mtn":
-                # appel API MTN Money
                 messages.success(request, f"Retrait de {montant} FCFA vers {numero} via MTN Money effectué avec succès.")
             elif operateur == "orange":
-                # appel API Orange Money
                 messages.success(request, f"Retrait de {montant} FCFA vers {numero} via Orange Money effectué avec succès.")
             else:
                 messages.error(request, "Opérateur non reconnu.")
             
-            # Mise à jour du solde
             request.user.profile.solde -= montant
             request.user.profile.save()
 
         return redirect("transaction_retrait")
 
     return render(request, "transactions/retrait.html", {"solde": solde})
-
-
-# --- Vue Django --- 
+ 
 @login_required 
 def transaction_depot(request): 
     if request.method == "POST": 
@@ -287,15 +276,30 @@ def creer_compte(request):
     if request.method == "POST":
         type_compte = request.POST.get("type")
         solde_initial = request.POST.get("solde")
-        currency = request.POST.get("currency", "XAF")  # valeur par défaut si non fourni
+        currency = request.POST.get("currency", "XAF")
 
-        # Génération d'un numéro de compte aléatoire (16 chiffres)
-        nombre = ""
-        for i in range(16):
-            aleatoire = random.randint(0, 9)
-            nombre += str(aleatoire)
+        # Vérifier si un compte du même type existe déjà
+        compte_existant = Compte.objects.filter(proprietaire=request.user, type=type_compte).first()
+        if compte_existant:
+            messages.error(request, f"Impossible de créer un deuxième compte {type_compte}.")
 
-        # Création du compte
+            # Créer une alerte fraude
+            FraudAlert.objects.create(
+                compte=compte_existant,
+                description=f"Tentative de création d'un deuxième compte {type_compte}",
+                status="non_validé",
+                risk_level="élevé"
+            )
+
+            # Déclencher une alerte via Celery
+            from .tasks import envoyer_alerte_fraude
+            envoyer_alerte_fraude.delay(request.user.id, type_compte)
+
+            return redirect("mes_comptes")
+
+        # Génération du numéro de compte
+        nombre = "".join([str(random.randint(0, 9)) for _ in range(16)])
+
         Compte.objects.create(
             proprietaire=request.user,
             type=type_compte,
@@ -307,22 +311,23 @@ def creer_compte(request):
 
         messages.success(request, f"Compte créé avec succès en {currency}.")
         return redirect("mes_comptes")
-    # Texte d’avertissement envoyé au template 
-    warning_text = ( "⚠️ Important : Seuls les comptes courants sont autorisés à effectuer des virements. " "Toute tentative de virement avec un compte épargne constitue une violation des règles " "et votre transaction sera automatiquement bloquée." )
 
+    warning_text = (
+        "⚠️ Important : Seuls les comptes courants sont autorisés à effectuer des virements. "
+        "Toute tentative de virement avec un compte épargne constitue une violation des règles "
+        "et votre transaction sera automatiquement bloquée."
+    )
     return render(request, "comptes/creer_compte.html", {"warning_text": warning_text})
 
 
 import requests
 
 def retrait_mtn(numero, montant):
-    # Credentials (à récupérer via MTN Developer Portal)
     subscription_key = "TON_SUBSCRIPTION_KEY"
     api_user = "TON_API_USER"
     api_key = "TON_API_KEY"
     base_url = "https://sandbox.momodeveloper.mtn.com"
 
-    # 1. Obtenir un token
     token_url = f"{base_url}/collection/token/"
     headers = {
         "Ocp-Apim-Subscription-Key": subscription_key,
@@ -331,11 +336,10 @@ def retrait_mtn(numero, montant):
     token_response = requests.post(token_url, headers=headers)
     access_token = token_response.json().get("access_token")
 
-    # 2. Initier la transaction
     request_url = f"{base_url}/collection/v1_0/requesttopay"
     headers = {
         "Authorization": f"Bearer {access_token}",
-        "X-Reference-Id": "transaction12345",  # ID unique
+        "X-Reference-Id": "transaction12345",
         "X-Target-Environment": "sandbox",
         "Ocp-Apim-Subscription-Key": subscription_key,
         "Content-Type": "application/json"
@@ -360,14 +364,12 @@ def retrait_orange(numero, montant):
     client_id = "TON_CLIENT_ID"
     client_secret = "TON_CLIENT_SECRET"
 
-    # 1. Obtenir un token
     token_url = "https://api.orange.com/oauth/v2/token"
     data = {"grant_type": "client_credentials"}
     headers = {"Authorization": f"Basic {client_id}:{client_secret}"}
     token_response = requests.post(token_url, data=data, headers=headers)
     access_token = token_response.json().get("access_token")
 
-    # 2. Initier la transaction
     request_url = f"{base_url}/transactions"
     headers = {
         "Authorization": f"Bearer {access_token}",
@@ -415,9 +417,7 @@ def get_compte_info(request):
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
-from .models import Compte
 
-# Vérifie que l'utilisateur est admin/staff
 def is_admin(user):
     return user.is_staff or user.is_superuser
 
@@ -428,7 +428,7 @@ def admin_comptes(request):
     return render(request, "admin/comptes.html", {"comptes": comptes})
 
 
-from .models import Compte, Message
+from .models import Message
 
 @user_passes_test(lambda u: u.is_staff)
 def admin_modifier_compte(request, compte_id):
@@ -436,7 +436,6 @@ def admin_modifier_compte(request, compte_id):
     client = compte.proprietaire
 
     if request.method == "POST":
-        # Anciennes valeurs
         ancien_nom = client.nom
         ancien_prenom = client.prenom
         ancien_email = client.email
@@ -445,14 +444,12 @@ def admin_modifier_compte(request, compte_id):
         ancien_pays = client.pays
         ancienne_ville = client.ville
 
-        # Mise à jour compte
         compte.numero_compte = request.POST.get("numero_compte")
         compte.type = request.POST.get("type")
         compte.solde = request.POST.get("solde")
         compte.currency = request.POST.get("currency")
         compte.save()
 
-        # Mise à jour client
         client.nom = request.POST.get("nom")
         client.prenom = request.POST.get("prenom")
         client.email = request.POST.get("email")
@@ -461,8 +458,6 @@ def admin_modifier_compte(request, compte_id):
         client.pays = request.POST.get("pays")
         client.ville = request.POST.get("ville")
         client.save()
-
-        # Construire message automatique
         changements = []
         if client.nom != ancien_nom:
             changements.append(f"Nom: {ancien_nom} → {client.nom}")
@@ -493,7 +488,6 @@ def admin_modifier_compte(request, compte_id):
     return render(request, "banka/modifier_compte.html", {"compte": compte, "client": client})
 
 
-
 def admin_supprimer_compte(request, compte_id):
     compte = get_object_or_404(Compte, id=compte_id)
     compte.delete()
@@ -518,8 +512,6 @@ def gerer_comptes(request):
     comptes = Compte.objects.all()
     return render(request, "banka/gerer_comptes.html", {"comptes": comptes})
 
-
-from .models import Message
 from .tasks import handle_message_created, send_registration_email
 
 @login_required
@@ -551,8 +543,6 @@ def send_message(request):
         "admin_user": admin_user
     })
 
-
-
 @login_required
 def transaction_list(request):
     if not request.user.is_staff:
@@ -580,8 +570,3 @@ def validate_transaction(request, tx_id):
     tx.fraud_flag = False
     tx.save()
     return redirect("fraud_list")
-
-
-
-
-

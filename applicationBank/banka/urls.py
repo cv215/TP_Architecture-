@@ -27,5 +27,4 @@ urlpatterns = [
     path("transactions/", views.transaction_list, name="transaction_list"),
     path("transactions/client/", views.client_transactions, name="client_transactions"),
     path("transactions/fraud/", views.fraud_list, name="fraud_list"),
-
 ]

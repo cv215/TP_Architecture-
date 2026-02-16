@@ -20,7 +20,7 @@
                 <tbody>
                     {% for compte in comptes %}
                     <tr>
-                        <td>{{ compte.proprietaire.username }}</td>
+                        <td>{{ compte.proprietaire.nom }} {{ compte.proprietaire.prenom }}</td>
                         <td>{{ compte.numero_compte }}</td>
                         <td>
                             {% if compte.type == "courant" %}

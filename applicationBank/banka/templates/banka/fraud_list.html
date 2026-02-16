@@ -1,34 +1,36 @@
 {% extends "banka/base.html" %}
 {% block content %}
 <div class="container mt-5">
-    <h2>Transactions suspectes</h2>
-    <table class="table table-danger table-hover">
-        <thead>
-            <tr>
-                <th>Client</th>
-                <th>Type</th>
-                <th>Montant</th>
-                <th>Date</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for tx in blocked %}
-            <tr>
-                <td>{{ tx.compte_source.username }}</td>
-                <td>{{ tx.get_type_transaction_display }}</td>
-                <td>{{ tx.montant }} FCFA</td>
-                <td>{{ tx.date_transaction|date:"d/m/Y H:i" }}</td>
-                <td>
-                    <a href="{% url 'validate_transaction' tx.id %}" class="btn btn-success btn-sm">Valider</a>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="5" class="text-center text-muted">Aucune fraude détectée</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<h2>Fraudes détectées</h2>
+<table class="table table-warning table-hover">
+    <thead>
+        <tr>
+            <th>Client</th>
+            <th>Numéro de compte</th>
+            <th>Description</th>
+            <th>Niveau de risque</th>
+            <th>Date</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for fraud in frauds %}
+        <tr>
+            <td>{{ fraud.compte.proprietaire.username }}</td>
+            <td>{{ fraud.compte.numero_compte }}</td>
+            <td>{{ fraud.description }}</td>
+            <td>{{ fraud.risk_level }}</td>
+            <td>{{ fraud.date_alert|date:"d/m/Y H:i" }}</td>
+            <td>
+                <a href="{% url 'validate_fraud' fraud.id %}" class="btn btn-success btn-sm">Valider</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="6" class="text-center text-muted">Aucune fraude détectée</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 </div>
 {% endblock %}
